@@ -1,1 +1,1 @@
-# grafika
+# Számítógépes grafika gyakorlat beadandó feladat

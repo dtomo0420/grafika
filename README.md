@@ -2,6 +2,8 @@
 A feladat egy vasúti terepasztal modellezése Three.js-ben az alábbiak szerint.
 A beadott csomag mérete maximum 8 MB lehet a Coospace beállítása miatt.
 
+***A megvalósítás a DeakTamas_CV8RM0 nevű mappában található, a dokumentációval egyetemben.***
+
 ## Fő elemek
 - A színtér – Talaj, vasútállomás, stilizált vonat, hegyek, stb.
 - A színtér legyen teljes mértékben megnézhető. Szükség esetén billentyűk/egér segítségével az épületek falai legyenek eltüntethetők.

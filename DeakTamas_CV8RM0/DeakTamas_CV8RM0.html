@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+    <meta charset=utf-8>
+    <title>DeákTamás kötprog</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%
+        }
+
+        #titlenamedown {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 80%;
+            text-align: left;
+            z-index: 100;
+            display: block;
+            color: white;
+            font: 20px Arial, "Script MT Bold";
+            font-weight: bold;
+        }
+
+        #titlenameabove {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            text-align: right;
+            z-index: 100;
+            display: block;
+            color: white;
+            font: 20px Arial, "Script MT Bold";
+            font-weight: bold;
+        }
+
+        #right {
+            position: absolute;
+            bottom: 8px;
+            right: 16px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+<div>
+    <div id="titlenamedown"></div>
+    <div id="titlenameabove"></div>
+    <div id="right">
+        <button>Nappal</button>
+        <button>Éjszaka</button>
+    </div>
+</div>
+
+<script type="module">
+    import * as THREE from './js-r132/build/three.module.js';
+    import {OBJLoader} from './js-r132/examples/jsm/loaders/OBJLoader.js';
+    import {TrackballControls} from './js-r132/examples/jsm/controls/TrackballControls.js';
+
+    // Globális változók
+    let WIDTH, HEIGHT, aspectRatio;
+    let scene, camera;
+    let groupLoaded, groupLoaded2;
+    let renderer;
+    let controls;
+    let light1;
+    let textureLoader = new THREE.TextureLoader();
+
+    let def = 0xD7E7F6;
+    let ambient;
+    let am = 0.4;
+
+    let groundGeometry, groundMaterial, ground;
+
+    let trackGeometry, trackMaterial, track;
+    let treeTexture = textureLoader.load('tree.jpg');
+
+    let railGeometry, railMaterial, rail;
+    let metalTexture = textureLoader.load('metal.jpg');
+
+    let crossGeometry, crossMaterial, cross;
+
+    let lamp1Geometry, lamp1Material, lamp1;
+    let lamp2Geometry, lamp2Material, lamp2;
+
+    let buildingGeometry, buildingMaterial, building;
+
+    let gate;
+    let gateCGeometry, gateCMaterial, gateC;
+
+    let treeGeometry, treeMaterial, tree, num, a, b, c;
+    let autumnTexture = textureLoader.load('autumn.jpg');
+
+    let pLight, pointLightHelper, sphereSize;
+    let plc = 0xFFFF00;
+    let plv = 0.4;
+
+    let holderWagon = new THREE.Object3D();
+    let holderValue = true;
+
+    let gateElement;
+    let gateTF = "abcd";
+    let sLightHelper, sLight, sLight2;
+
+    let x = 7, y = 4, z = 3;
+
+    loader();
+
+    function loader() {
+        let loader = new OBJLoader();
+        loader.load(
+            'DeakTamas_CV8RM0.obj',
+            function (loaded) {
+                // A loaded egy THREE.Group objektum lesz, amelynek a gyermeke(i) a mesh(-ek)!
+                groupLoaded = loaded;
+                console.log(loaded);
+
+                loaded.traverse(function (child) {
+                    if (child instanceof THREE.Mesh) {
+                        child.scale.set(0.5, 0.5, 0.5);
+                        child.material = new THREE.MeshLambertMaterial({color: 0xDDDDDD, wireframe: false});
+                        child.receiveShadow = true;
+                        child.castShadow = true;
+                    }
+                });
+                init();
+                scene.add(groupLoaded);
+            },
+            // Betöltés előrehaladása közben hívódik
+            function (xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            // Hibás betöltés esetén
+            function () {
+                console.log('An error happened!');
+            });
+        loader.load(
+            'DeakTamas_CV8RM0_2.obj',
+            function (loaded) {
+                // A loaded egy THREE.Group objektum lesz, amelynek a gyermeke(i) a mesh(-ek)!
+                groupLoaded2 = loaded;
+                console.log(loaded);
+
+                groupLoaded2.traverse(function (child) {
+                    if (child instanceof THREE.Mesh) {
+                        child.scale.set(0.5, 0.5, 0.5);
+                        child.material = new THREE.MeshLambertMaterial({color: 0xDDDDDD, wireframe: false});
+                        child.receiveShadow = true;
+                        child.castShadow = true;
+                    }
+                });
+                scene.add(groupLoaded2);
+            },
+            // Betöltés előrehaladása közben hívódik
+            function (xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            // Hibás betöltés esetén
+            function () {
+                console.log('An error happened!');
+            });
+    }
+
+    function init() {
+        // Böngésző ablakméret lekérése és méretarány számítása
+        HEIGHT = window.innerHeight;
+        WIDTH = window.innerWidth;
+        aspectRatio = WIDTH / HEIGHT;
+
+        // Renderer létrehozása és DOM-hoz adása
+        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setSize(WIDTH, HEIGHT);
+        renderer.setClearColor(def);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        scene = new THREE.Scene();
+
+        // Kamera létrehozása és vetítési paramétereinek beállítása
+        camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+        camera.position.set(x, y, z);
+        camera.lookAt(scene.position);
+
+        lights(am, plc, plv);
+
+        groundfv();
+
+        crossfv();
+
+        lampfv();
+
+        gatefv();
+
+        buildingfv();
+
+        tracksfv();
+
+        lamp();
+
+        wagon();
+
+        treefv();
+
+        controls = new TrackballControls(camera, renderer.domElement);
+        controls.rotateSpeed = 5.0;
+        controls.panSpeed = 1.0;
+
+        animate();
+
+        window.addEventListener('keypress', keyCode);
+        document.getElementById("titlenamedown").innerHTML = "Deák Tamás, CV8RM0 <br> Gazdaságinformatikus BSc <br>2021 ősz <br>";
+        document.getElementById("titlenameabove").innerHTML = "Billenytű kombinációk: <br> i - vászonra vetített szöveg <br> w - kamera közelítése az origóra (x tengely) <br> " +
+            "s - kamera távolítása az origóra (x tengely) <br> d - forgás jobbra (x tengely) <br> a - forgás balra (x tengely) <br>";
+    }
+
+    function groundfv() {
+        groundGeometry = new THREE.PlaneGeometry(100, 100);
+        groundMaterial = new THREE.MeshPhongMaterial({
+            color: 0xA3B764,
+        });
+        ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -1.0 * THREE.MathUtils.degToRad(90);
+        ground.receiveShadow = true;
+        ground.castShadow = true;
+        scene.add(ground);
+
+    }
+
+    function tracksfv() {
+        for (let i = -40; i <= 40; i++) {
+            trackGeometry = new THREE.BoxGeometry(1.5, 0.1, 0.5);
+            trackMaterial = new THREE.MeshLambertMaterial();
+            trackMaterial.map = treeTexture;
+            track = new THREE.Mesh(trackGeometry, trackMaterial);
+            track.position.set(-4, 0.05, i);
+            track.receiveShadow = true;
+            track.castShadow = true;
+            scene.add(track);
+        }
+        let i = -3.5;
+        do {
+            railGeometry = new THREE.BoxGeometry(0.1, 0.1, 80);
+            railMaterial = new THREE.MeshLambertMaterial();
+            railMaterial.map = metalTexture;
+            rail = new THREE.Mesh(railGeometry, railMaterial);
+            rail.position.set(i, 0.1, 0);
+            rail.receiveShadow = true;
+            rail.castShadow = true;
+            scene.add(rail);
+            i -= 1;
+        } while (i >= -4.5);
+
+    }
+
+    function lights(am, plc, plv) {
+        ambient = new THREE.AmbientLight(0xFFFCAA, am);
+        scene.add(ambient);
+
+        pLight = new THREE.PointLight(plc, plv);
+        pLight.position.set(10, 60, 10);
+        pLight.castShadow = true;
+        pLight.shadow.mapSize.width = 2048;
+        pLight.shadow.mapSize.height = 2048;
+        scene.add(pLight);
+
+        // pointLightHelper = new THREE.PointLightHelper( pLight, 1 );
+        // scene.add( pointLightHelper );
+    }
+
+    function crossfv() {
+        for (let i = 0; i >= -5; i -= 5) {
+            crossGeometry = new THREE.BoxGeometry(0.05, 0.1, 1.3);
+            crossMaterial = new THREE.MeshLambertMaterial({color: 0xe00000, wireframe: false});
+            cross = new THREE.Mesh(crossGeometry, crossMaterial);
+            cross.position.set(0.25, 3.5, i);
+            cross.rotation.x = THREE.MathUtils.degToRad(45);
+            scene.add(cross);
+
+            crossGeometry = new THREE.BoxGeometry(0.05, 0.1, 1.3);
+            crossMaterial = new THREE.MeshLambertMaterial({color: 0xe00000, wireframe: false});
+            cross = new THREE.Mesh(crossGeometry, crossMaterial);
+            cross.position.set(0.25, 3.5, i);
+            cross.rotation.x = THREE.MathUtils.degToRad(135);
+            scene.add(cross);
+        }
+    }
+
+    function lampfv() {
+        for (let i = 0.3; i >= -8; i -= 4.4) {
+            lamp1Geometry = new THREE.CylinderGeometry(0.08, 0.1, 0.1, 100);
+            lamp1Material = new THREE.MeshLambertMaterial({color: 0xe00000, wireframe: false});
+            lamp1 = new THREE.Mesh(lamp1Geometry, lamp1Material);
+            lamp1.position.set(0.2, 2.5, i);
+            lamp1.rotation.z = -1 * THREE.MathUtils.degToRad(90);
+            scene.add(lamp1);
+
+            i -= 0.6;
+            lamp2Geometry = new THREE.CylinderGeometry(0.08, 0.1, 0.1, 100);
+            lamp2Material = new THREE.MeshLambertMaterial({color: 0xe00000, wireframe: false});
+            lamp2 = new THREE.Mesh(lamp2Geometry, lamp2Material);
+            lamp2.position.set(0.2, 2.5, i);
+            lamp2.rotation.z = -1 * THREE.MathUtils.degToRad(90);
+            scene.add(lamp2);
+        }
+    }
+
+    function buildingfv() {
+        //alapzat
+        buildingGeometry = new THREE.BoxGeometry(4, 0.5, 10);
+        buildingMaterial = new THREE.MeshLambertMaterial({color: 0xAA8534, wireframe: false});
+        building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+        building.position.set(-7, 0.25, -13);
+        building.receiveShadow = true;
+        building.castShadow = true;
+        scene.add(building);
+
+        for (let i = -10; i >= -15; i -= 5) {
+            buildingGeometry = new THREE.BoxGeometry(0.2, 5, 0.2);
+            buildingMaterial = new THREE.MeshLambertMaterial();
+            buildingMaterial.map = metalTexture;
+            building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+            building.position.set(-7, 2.5, i);
+            building.receiveShadow = true;
+            building.castShadow = true;
+            scene.add(building);
+        }
+
+        //tető
+        buildingGeometry = new THREE.BoxGeometry(4, 0.5, 10);
+        buildingMaterial = new THREE.MeshLambertMaterial({color: 0xB12626, wireframe: false});
+        building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+        building.position.set(-7, 5, -13);
+        building.receiveShadow = true;
+        building.castShadow = true;
+        scene.add(building);
+    }
+
+    function gatefv() {
+
+        gateCGeometry = new THREE.CylinderGeometry(0.2, 0.2, 5.5, 100);
+        gateCMaterial = new THREE.MeshLambertMaterial();
+        gateCMaterial.map = metalTexture;
+        gateC = new THREE.Mesh(gateCGeometry, gateCMaterial);
+        gateC.position.set(-2.75, 1.2, -2.75);
+        gateC.rotation.z = THREE.MathUtils.degToRad(90);
+        gateC.rotation.y = THREE.MathUtils.degToRad(90);
+        gateC.receiveShadow = true;
+        gateC.castShadow = true;
+        gateElement = new THREE.Object3D();
+        gateElement.add(gateC);
+        scene.add(gateElement);
+
+        document.addEventListener('mousedown', onDocumentMouseDown, false);
+
+    }
+
+    function treefv() {
+        /*
+        x - x tengelyen milyen értéket vesz fel
+        z - z tengelyen milyen értéket vesz fel
+        b - a fa előállításához használt változó
+        d - a b-ből származtatott változó a törzshöz
+         */
+
+        let number = 0;
+        while (number < 70) {
+            a = 90 * (0.5 - Math.random());   //[-90, 90]
+            c = 90 * (0.5 - Math.random());   //[-90, 90]
+            let b = 1 + Math.floor(Math.random() * (3 - 1 + 1)); //3 és 1 közötti szám generálása
+            let d = b * 0.15;
+
+            if (-15 > a || a > 15) {
+
+                treeGeometry = new THREE.BoxGeometry(d, 2 * b, d);
+                treeMaterial = new THREE.MeshLambertMaterial();
+                treeMaterial.map = treeTexture;
+                tree = new THREE.Mesh(treeGeometry, treeMaterial);
+                tree.position.set(a, b, c);
+                tree.receiveShadow = true;
+                tree.castShadow = true;
+                scene.add(tree);
+
+                treeGeometry = new THREE.SphereGeometry(b, 30, 30);
+                treeMaterial = new THREE.MeshLambertMaterial();
+                treeMaterial.map = autumnTexture;
+                tree = new THREE.Mesh(treeGeometry, treeMaterial);
+                tree.position.set(a, 2.5 * b, c);
+                tree.receiveShadow = true;
+                tree.castShadow = true;
+                scene.add(tree);
+
+                number += 1;
+            }
+        }
+    }
+
+    function wagon() {
+        trackGeometry = new THREE.BoxGeometry(1.5, 0.2, 3);
+        trackMaterial = new THREE.MeshLambertMaterial();
+        trackMaterial.map = treeTexture;
+        track = new THREE.Mesh(trackGeometry, trackMaterial);
+        track.position.set(-3.5, 0.3, 0);
+        track.receiveShadow = true;
+        track.castShadow = true;
+        holderWagon.add(track)
+
+        for (let i = -2.85; i > -5; i -= 1.3) {
+            trackGeometry = new THREE.BoxGeometry(0.2, 1, 3);
+            trackMaterial = new THREE.MeshLambertMaterial();
+            trackMaterial.map = treeTexture;
+            track = new THREE.Mesh(trackGeometry, trackMaterial);
+            track.position.set(i, 0.9, 0);
+            track.receiveShadow = true;
+            track.castShadow = true;
+            holderWagon.add(track)
+        }
+
+
+        for (let i = -1.4; i < 3; i += 2.8) {
+            trackGeometry = new THREE.BoxGeometry(1.5, 1, 0.2);
+            trackMaterial = new THREE.MeshLambertMaterial();
+            trackMaterial.map = treeTexture;
+            track = new THREE.Mesh(trackGeometry, trackMaterial);
+            track.position.set(-3.5, 0.9, i);
+            track.receiveShadow = true;
+            track.castShadow = true;
+            holderWagon.add(track);
+        }
+
+        holderWagon.position.set(-0.5, 0, -35);
+
+        scene.add(holderWagon);
+    }
+
+    function wagonMove() {
+        if (holderWagon.position.z < -35) {
+            holderValue = true;
+        }
+        if (holderWagon.position.z > 35) {
+            holderValue = false;
+        }
+        if (holderValue === true) {
+            holderWagon.position.z += 0.1;
+        } else {
+            holderWagon.position.z -= 0.1;
+        }
+    }
+
+    function onDocumentMouseDown() {
+        if (gateTF === "le" || gateTF === "abcd") {
+            gateTF = "fel";
+        } else {
+            gateTF = "le";
+        }
+        gateMove(gateTF);
+    }
+
+    function gateMove(gateTF) {
+        if (gateTF === "fel" && gateElement.rotation.x <= THREE.MathUtils.degToRad(45)) {
+            gateElement.rotation.x += 0.01;
+        }
+        if (gateTF === "le" && gateElement.rotation.x >= THREE.MathUtils.degToRad(0)) {
+            gateElement.rotation.x -= 0.01;
+
+        }
+    }
+
+    function lamp() {
+        treeGeometry = new THREE.BoxGeometry(0.3, 6, 0.3, 15, 25, 40);
+        treeMaterial = new THREE.MeshLambertMaterial();
+        treeMaterial.map = treeTexture;
+        tree = new THREE.Mesh(treeGeometry, treeMaterial);
+        tree.position.set(-5, 3, 4);
+        scene.add(tree);
+
+        treeGeometry = new THREE.BoxGeometry(0.3, 0.3, 1, 15, 25, 40);
+        treeMaterial = new THREE.MeshLambertMaterial();
+        treeMaterial.map = treeTexture;
+        tree = new THREE.Mesh(treeGeometry, treeMaterial);
+        tree.position.set(-5, 6.15, 3.7);
+        scene.add(tree);
+
+        treeGeometry = new THREE.BoxGeometry(0.3, 6, 0.3, 15, 25, 40);
+        treeMaterial = new THREE.MeshLambertMaterial();
+        treeMaterial.map = treeTexture;
+        tree = new THREE.Mesh(treeGeometry, treeMaterial);
+        tree.position.set(-5, 3, -22);
+        scene.add(tree);
+
+        treeGeometry = new THREE.BoxGeometry(0.3, 0.3, 1, 15, 25, 40);
+        treeMaterial = new THREE.MeshLambertMaterial();
+        treeMaterial.map = treeTexture;
+        tree = new THREE.Mesh(treeGeometry, treeMaterial);
+        tree.position.set(-5, 6.15, -21.7);
+        scene.add(tree);
+
+    }
+
+    const but = document.querySelectorAll('button');
+    but[0].addEventListener('click', function () {
+        def = 0xD7E7F6;
+        renderer.setClearColor(def);
+        //fog
+        scene.fog = null;
+        //ambient light
+        scene.remove(ambient);
+        scene.remove(pLight);
+        scene.remove(pointLightHelper);
+        lights(0.4, 0xFFFF00, 0.4);
+
+        //reflektor
+        scene.remove(sLight);
+        scene.remove(sLight2);
+        // alert ("Nappali működés");
+    });
+    but[1].addEventListener('click', function () {
+        def = 0x00002A;
+        renderer.setClearColor(def);
+        //fog
+        scene.fog = new THREE.Fog(0x808080, 0.1, 40);
+        scene.fog = new THREE.FogExp2(0x808080, 0.04);
+        //ambient light
+        scene.remove(ambient);
+        scene.remove(pLight);
+        scene.remove(pointLightHelper);
+        lights(0.3, 0xFFFFFF, 0.4);
+
+        //reflektor
+        scene.remove(sLight);
+        scene.remove(sLight2);
+
+        sLight = new THREE.SpotLight(0xD30000, 2);
+        sLight.position.set(-5, 6.3, 4);
+        sLight.angle = THREE.MathUtils.degToRad(20);
+        sLight.distance = 20;
+        sLight.castShadow = true;
+        sLight.shadow.mapSize.width = 2048;
+        sLight.shadow.mapSize.height = 2048;
+        scene.add(sLight);
+        // sLightHelper = new THREE.SpotLightHelper( sLight );
+        // scene.add( sLightHelper );
+
+        sLight2 = new THREE.SpotLight(0xD30000, 10);
+        sLight2.position.set(-5, 6.15, -21.7);
+        sLight2.angle = THREE.MathUtils.degToRad(15);
+        sLight2.distance = 25;
+        sLight2.castShadow = true;
+        sLight2.shadow.mapSize.width = 2048;
+        sLight2.shadow.mapSize.height = 2048;
+        scene.add(sLight2);
+
+        // sLightHelper = new THREE.SpotLightHelper( sLight2 );
+        // scene.add( sLightHelper );
+        // alert ("Esti működés");
+
+    });
+
+    function keyCode(event) {
+        let char = event.keyCode;
+        // console.log( 'keypress: ' + char );
+        if (char === 119) {
+            console.log(char);
+            camera.position.x -= 0.5;
+        }
+        if (char === 115) {
+            console.log(char);
+            camera.position.x += 0.5;
+        }
+        if (char === 97) {
+            console.log(char);
+            camera.position.z += 0.5;
+
+        }
+        if (char === 100) {
+            console.log(char);
+            camera.position.z -= 0.5;
+
+        }
+        if (char === 105) {
+            if (document.getElementById("titlenamedown").innerHTML !== "Deák Tamás, CV8RM0 <br> Gazdaságinformatikus BSc <br>2021 ősz <br>") {
+                document.getElementById("titlenameabove").innerHTML = "Billenytű kombinációk: <br> i - vászonra vetített szöveg <br> w - kamera közelítése az origóra (x tengely) <br> " +
+                    "s - kamera távolítása az origóra (x tengely) <br> d - forgás jobbra (x tengely) <br> a - forgás balra (x tengely) <br>";
+                document.getElementById("titlenamedown").innerHTML = "Deák Tamás, CV8RM0 <br> Gazdaságinformatikus BSc <br>2021 ősz <br>";
+            } else {
+                document.getElementById("titlenamedown").innerHTML = "";
+                document.getElementById("titlenameabove").innerHTML = "";
+            }
+        }
+    }
+
+    function animate() {
+        // Újabb képkocka rajzolásának kérése.
+        // Maximálisan 60 FPS-t biztosít a rendszer.
+        requestAnimationFrame(animate);
+        controls.update();
+
+        wagonMove();
+        gateMove(gateTF);
+        render();
+    }
+
+    function render() {
+        // 3D -> 2D vetített kép kiszámítása.
+        // scene 3D színtér képe a camera kamera szemszögéből.
+        renderer.render(scene, camera);
+    }
+
+</script>
+</body>
+</html>

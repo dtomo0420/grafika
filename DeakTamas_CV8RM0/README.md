@@ -1,3 +1,8 @@
+# A program nappali módban
+![img.png](img.png)
+# A programm éjjeli módban
+![img_1.png](img_1.png)
+
 # BLENDERBEN MEGVALÓSÍTOTT ELEMEK
 ## Jelzőlámpa - DeakTamas_CV8RM0.blend
 - A jelzőlámpa állványának létrehozása, méretre formázása.
